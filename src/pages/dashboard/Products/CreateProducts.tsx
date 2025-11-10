@@ -1,25 +1,57 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import api from "../../../api/axios";
+
+interface Product {
+  id: number;
+  name: string;
+  type: string;
+  category: {
+    id: number;
+    name: string;
+  };
+  unit: {
+    id: number;
+    name: string;
+  };
+  supplier: {
+    id: number;
+    name: string;
+  };
+  mrp: number | null;
+  locked_price: number | null;
+  cabin_number: string;
+  img: string | null;
+  color: string;
+  barcode: string;
+  created_at: string;
+  updated_at: string;
+}
 
 function CreateProducts() {
-  const salesData = [
-    {
-      productID: "250929003",
-      productType: "Sugar",
-      productName: "Suger",
-      productCode: "TS425",
-      cabinNumber: "5",
-      barcode: "742388563",
-      supplier: "Jeewan",
-      categories: "Grocery",
-      unit: "Kg",
-      colors: "Red",
-      MRP: "25000",
-      lockedPrice: "25000",
-      image: "image.jpg",
-    },
-  ];
+  const [productsData, setProductsData] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/api/products');
+        
+        // Set the products data from API response
+        const products = response.data?.data || [];
+        setProductsData(products);
+      } catch (error) {
+        setProductsData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   type SelectOption = {
     value: string;
@@ -41,9 +73,8 @@ function CreateProducts() {
   ];
 
   const productType = [
-    { value: "suger", label: "Suger" },
-    { value: "fima", label: "Fima" },
-    { value: "snacks", label: "Snacks" },
+    { value: "STOCKED", label: "STOCKED" },
+    { value: "NON_STOCK", label: "NON_STOCK" },
   ];
 
   const categories = [
@@ -76,7 +107,7 @@ function CreateProducts() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         setSelectedIndex((prev) =>
-          prev < salesData.length - 1 ? prev + 1 : prev
+          prev < productsData.length - 1 ? prev + 1 : prev
         );
       } else if (e.key === "ArrowUp") {
         setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -85,7 +116,7 @@ function CreateProducts() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [salesData.length]);
+  }, [productsData.length]);
   return (
     <>
       <div className={"flex flex-col gap-4 h-full"}>
@@ -119,8 +150,8 @@ function CreateProducts() {
                       })
                     : setSelected(null)
                 }
-                placeholder="Type to search types"
-                allowCreate={true}
+                placeholder="Select Product Type"
+                allowCreate={false}
               />
             </div>
             <div>
@@ -380,57 +411,79 @@ function CreateProducts() {
               </thead>
 
               <tbody className="bg-white divide-y divide-gray-200">
-                {salesData.map((sale, index) => (
-                  <tr
-                    key={index}
-                    onClick={() => setSelectedIndex(index)}
-                    className={`cursor-pointer ${
-                      index === selectedIndex
-                        ? "bg-green-100 border-l-4 border-green-600"
-                        : "hover:bg-green-50"
-                    }`}
-                  >
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.productID}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.productType}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.productName}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.productCode}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.cabinNumber}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.barcode}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.supplier}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.categories}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.unit}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.colors}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.MRP}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.lockedPrice}
-                    </td>
-                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                      {sale.image}
+                {loading ? (
+                  <tr>
+                    <td colSpan={13} className="px-6 py-4 text-center text-sm text-gray-500">
+                      Loading products...
                     </td>
                   </tr>
-                ))}
+                ) : productsData.length === 0 ? (
+                  <tr>
+                    <td colSpan={13} className="px-6 py-4 text-center text-sm text-gray-500">
+                      No products found
+                    </td>
+                  </tr>
+                ) : (
+                  productsData.map((product, index) => (
+                    <tr
+                      key={product.id}
+                      onClick={() => setSelectedIndex(index)}
+                      className={`cursor-pointer ${
+                        index === selectedIndex
+                          ? "bg-green-100 border-l-4 border-green-600"
+                          : "hover:bg-green-50"
+                      }`}
+                    >
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.id}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.type}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.name}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.barcode || '-'}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.cabin_number || '-'}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.barcode}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.supplier.name}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.category.name}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.unit.name}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.color || '-'}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.mrp || '-'}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.locked_price || '-'}
+                      </td>
+                      <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                        {product.img ? (
+                          <img 
+                            src={product.img} 
+                            alt={product.name} 
+                            className="h-8 w-8 object-cover rounded" 
+                          />
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
